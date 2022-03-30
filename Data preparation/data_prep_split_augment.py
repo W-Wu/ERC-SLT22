@@ -10,7 +10,7 @@ if maxlen_set > 0:
     variableL = [0.5,1.0] if sys.argv[4]=='1' else None # variable sub-seq len
 
 
-f=open('./data/order.json','r')
+f=open('../data/order.json','r')
 text=f.read()
 paras=json.loads(text)
 
@@ -19,7 +19,7 @@ traincv_list =[x for x in paras.keys() if int(x[4]) != test_id]
 cv_list =[x for i,x in enumerate(traincv_list) if i % 5 ==0]
 train_list =[x for i,x in enumerate(traincv_list) if i % 5 !=0]
 
-output_dir = './data/'
+output_dir = '../data/'
 
 def get_maxlen(maxlen,variableL, meetinglength):
     if variableL is not None:
