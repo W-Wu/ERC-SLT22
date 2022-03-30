@@ -1,5 +1,6 @@
 # ERC-IS22
-Code for "Distribution-based Emotion Recognition in Conversation"
+Code for paper "Distribution-based Emotion Recognition in Conversation"
+Please cite: 
 
 ## Data preparation
 1. Prepare the input features in the form of a dictionary. The keys are the utterance names and the values are the corresponding numpy arrays.
