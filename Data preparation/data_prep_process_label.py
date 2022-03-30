@@ -3,7 +3,7 @@ import json
 import numpy as np
 
 iemo_root = "../IEMOCAP_full_release/"
-output_dir = './data/'
+output_dir = '../data/'
 
 file_roots=[iemo_root+"Session"+str(i)+"/dialog/EmoEvaluation" for i in range(1,6)]
 file_paths=[]   
