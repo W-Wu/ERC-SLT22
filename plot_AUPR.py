@@ -17,7 +17,7 @@ def ComputePR(path, mode):
 		AP = average_precision_score(y_true, Ent)
 	return precision, recall, AP
 
-data_dir='./'
+data_dir='./exp/'
 P_maxP_dpnkl, R_maxP_dpnkl, AP_maxP_dpnkl =ComputePR(data_dir+"AUC-score.npz",'maxP')
 P_Ent_dpnkl, R_Ent_dpnkl, AP_Ent_dpnkl =ComputePR(data_dir+"AUC-score.npz",'Ent')
 
