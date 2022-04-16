@@ -11,7 +11,7 @@ text=f.read()
 paras=json.loads(text)
 if data_type == 'label':
     data_path = '../data/IEMOCAP-softlabel-sum.npy'
-if data_type == 'label_hard':
+elif data_type == 'label_hard':
     data_path = '../data/IEMOCAP-hardlabel.npy'
 elif data_type == 'w2v2':
     data_path = '../data/w2v2-ft-avg.npy'
