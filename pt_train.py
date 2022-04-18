@@ -144,171 +144,172 @@ class Dir_loss(nn.Module):
         return loss
 
 
-set_seed(param.seed)
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+if __name__ == "__main__":
+    set_seed(param.seed)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-if param.save_model:
-    output_dir='./exp/'
-    if not os.path.exists(output_dir): os.makedirs(output_dir) 
+    if param.save_model:
+        output_dir='./exp/'
+        if not os.path.exists(output_dir): os.makedirs(output_dir) 
 
-trainloader,valloader,testloader=prep_dataloader(scp_train = "./data/iemocap_diag_train.scp",
-                                                    scp_cv = "./data/iemocap_diag_cv-all.scp",
-                                                    scp_test = "./data/iemocap_diag_test-all.scp")
+    trainloader,valloader,testloader=prep_dataloader(scp_train = "./data/iemocap_diag_train.scp",
+                                                        scp_cv = "./data/iemocap_diag_cv-all.scp",
+                                                        scp_test = "./data/iemocap_diag_test-all.scp")
 
-label_all = np.load('./data/IEMOCAP-hardlabel.npy',allow_pickle=True).item()
-name_utt1=[x for x in label_all.keys() if label_all[x] == 'xxx']
+    label_all = np.load('./data/IEMOCAP-hardlabel.npy',allow_pickle=True).item()
+    name_utt1=[x for x in label_all.keys() if label_all[x] == 'xxx']
 
-model = TransformerModel(device=device).to(device)
-optimizer = optim.Adam(model.parameters(), lr=param.learning_rate, weight_decay = param.l2_reg)
-# scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9, last_epoch=-1)
-scheduler = get_linear_schedule_with_warmup(optimizer,num_warmup_steps=4,num_training_steps=param.EPOCH)
-
-
-loss_fn_kl = nn.KLDivLoss(reduction='sum')
-loss_fn = nn.CrossEntropyLoss() 
-loss_fn_dir = Dir_loss(reduction = 'sum',use_smooth=True)
-logsoftmax= nn.LogSoftmax(dim=-1)
-softmax= nn.Softmax(dim=-1)
+    model = TransformerModel(device=device).to(device)
+    optimizer = optim.Adam(model.parameters(), lr=param.learning_rate, weight_decay = param.l2_reg)
+    # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9, last_epoch=-1)
+    scheduler = get_linear_schedule_with_warmup(optimizer,num_warmup_steps=4,num_training_steps=param.EPOCH)
 
 
-tf_ratio=[]
-tf_idx = 0
+    loss_fn_kl = nn.KLDivLoss(reduction='sum')
+    loss_fn = nn.CrossEntropyLoss() 
+    loss_fn_dir = Dir_loss(reduction = 'sum',use_smooth=True)
+    logsoftmax= nn.LogSoftmax(dim=-1)
+    softmax= nn.Softmax(dim=-1)
 
-log_dic={}
 
-for epoch in range(param.EPOCH):
-    pred_index_train=np.array([])
-    target_train=np.array([])
+    tf_ratio=[]
+    tf_idx = 0
 
-    pred_index_val=np.array([])
-    target_val=np.array([])
+    log_dic={}
 
-    start_time = time.time()
-    loss_total=0.0
+    for epoch in range(param.EPOCH):
+        pred_index_train=np.array([])
+        target_train=np.array([])
 
-    if param.forcing_type =='linear':
-        if epoch <param.epoch_start_tf:
-            param.forcing_decay_type = None
-            param.forcing_ratio = 1
+        pred_index_val=np.array([])
+        target_val=np.array([])
+
+        start_time = time.time()
+        loss_total=0.0
+
+        if param.forcing_type =='linear':
+            if epoch <param.epoch_start_tf:
+                param.forcing_decay_type = None
+                param.forcing_ratio = 1
+            else:
+                param.forcing_decay_type = param.forcing_type
+                param.forcing_ratio = param.forcing_ratio_default
+                param.forcing_decay=param.forcing_decay_default
+        elif param.forcing_type =='exp':
+            if epoch <param.epoch_start_tf:
+                param.forcing_decay_type = None
+                param.forcing_ratio = 1
+            else:
+                param.forcing_decay_type = param.forcing_type
+                param.forcing_ratio = param.forcing_ratio_default
+        elif param.forcing_type =='sigmoid':
+                param.forcing_decay_type = param.forcing_type
+                param.forcing_ratio = param.forcing_ratio_default
         else:
-            param.forcing_decay_type = param.forcing_type
-            param.forcing_ratio = param.forcing_ratio_default
-            param.forcing_decay=param.forcing_decay_default
-    elif param.forcing_type =='exp':
-        if epoch <param.epoch_start_tf:
             param.forcing_decay_type = None
-            param.forcing_ratio = 1
-        else:
-            param.forcing_decay_type = param.forcing_type
             param.forcing_ratio = param.forcing_ratio_default
-    elif param.forcing_type =='sigmoid':
-            param.forcing_decay_type = param.forcing_type
-            param.forcing_ratio = param.forcing_ratio_default
-    else:
-        param.forcing_decay_type = None
-        param.forcing_ratio = param.forcing_ratio_default
 
-    if epoch ==param.epoch_start_tf: tf_idx = 0
+        if epoch ==param.epoch_start_tf: tf_idx = 0
 
-    model.train()
-    for i, data in enumerate(trainloader, 0):
-        op_6,tgt_soft,tgt_dpn,fname,op_5,tgt_5 = train_batch(tf_idx,data,filter4=False)
-        tf_idx+=1
+        model.train()
+        for i, data in enumerate(trainloader, 0):
+            op_6,tgt_soft,tgt_dpn,fname,op_5,tgt_5 = train_batch(tf_idx,data,filter4=False)
+            tf_idx+=1
 
-        _, indicies = torch.max(op_5,1)
-        # loss = loss_fn(op_5,tgt_5.long())   # for hard system
-        loss_kl = loss_fn_kl(logsoftmax(op_6),tgt_soft)
-        loss_dpn = loss_fn_dir(op_6,tgt_dpn)
-        loss = param.kl * loss_kl + loss_dpn
+            _, indicies = torch.max(op_5,1)
+            # loss = loss_fn(op_5,tgt_5.long())   # for hard system
+            loss_kl = loss_fn_kl(logsoftmax(op_6),tgt_soft)
+            loss_dpn = loss_fn_dir(op_6,tgt_dpn)
+            loss = param.kl * loss_kl + loss_dpn
 
-        pred_index_train=np.append(pred_index_train,indicies.cpu().numpy())
-        target_train=np.append(target_train,tgt_5.cpu().numpy())
-        assert pred_index_train.shape == target_train.shape,(pred_index_train.shape , target_train.shape)
-        loss_total+=loss.detach().item()
+            pred_index_train=np.append(pred_index_train,indicies.cpu().numpy())
+            target_train=np.append(target_train,tgt_5.cpu().numpy())
+            assert pred_index_train.shape == target_train.shape,(pred_index_train.shape , target_train.shape)
+            loss_total+=loss.detach().item()
 
-        optimizer.zero_grad()
-        if param.grad_accum >1 :
-            loss/=param.grad_accum
-            loss.backward()
-            if i%param.grad_accum ==0:
+            optimizer.zero_grad()
+            if param.grad_accum >1 :
+                loss/=param.grad_accum
+                loss.backward()
+                if i%param.grad_accum ==0:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+                    optimizer.step()
+            else:
+                loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
                 optimizer.step()
-        else:
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
-            optimizer.step()
+
+        model.eval()
+        cv_KL=0
+        with torch.no_grad():
+            for i, data in enumerate(valloader, 0):
+                op_6,tgt_soft,tgt_dpn,fname,op_5,tgt_5 = decode(data)
+                KL=loss_fn_kl(logsoftmax(op_6),tgt_soft).detach().item()
+                cv_KL+=KL
+                _, indicies = torch.max(op_5,1)
+                pred_index_val=np.append(pred_index_val,indicies.cpu().numpy())
+                target_val=np.append(target_val,tgt_5.cpu().numpy())
+                assert pred_index_val.shape == target_val.shape,(pred_index_val.shape , target_val.shape)
+
+
+        torch.save(model.state_dict(), '{}/pytorchmodel-E{}.pt'.format(output_dir,epoch))
+
+        # loss_batch = loss_total/len(trainloader)    #for hard system
+        loss_batch = loss_total/len(target_train)
+        log_dic[epoch]={'train_loss':loss_batch,
+                        'train_5class_WA':accuracy_score(target_train,pred_index_train)*100.0,
+                        'train_5class_UA':balanced_accuracy_score(target_train,pred_index_train)*100.0,
+                        'val_5class_KL':cv_KL/len(target_val),
+                        'val_5class_WA':accuracy_score(target_val,pred_index_val)*100.0,
+                        'val_5class_UA':balanced_accuracy_score(target_val,pred_index_val)*100.0,
+                        'elapse_time':time.time() - start_time,
+                        'current_lr':optimizer.state_dict()['param_groups'][0]['lr'],
+                        'tf_ratio':tf_ratio[-1]
+        }
+        scheduler.step()
+        torch.cuda.empty_cache()
+
+
+    # test
+    pred_index_test=np.array([])
+    target_test=np.array([])
+
+    pred_index4_test=np.array([])
+    target4_test=np.array([])
 
     model.eval()
-    cv_KL=0
+    test_KL=0
+    y_true=[]
+    y_score_maxP=[]
+    y_score_ent=[]
     with torch.no_grad():
-        for i, data in enumerate(valloader, 0):
-            op_6,tgt_soft,tgt_dpn,fname,op_5,tgt_5 = decode(data)
+        for i, data in enumerate(testloader, 0):
+            op_6,tgt_soft,tgt_dpn,fname,op_5,tgt_5,op_4,tgt_4 = decode(data,filter4=True)
             KL=loss_fn_kl(logsoftmax(op_6),tgt_soft).detach().item()
-            cv_KL+=KL
+            test_KL+=KL
+            for i,x in enumerate(fname):
+                if x in name_utt1:
+                    y_true.append(0)
+                else:
+                    y_true.append(1)
+                tmp=softmax(op_6[i]).cpu().numpy()
+                y_score_maxP.append(max(tmp))
+                y_score_ent.append(-entropy(tmp))
+
             _, indicies = torch.max(op_5,1)
-            pred_index_val=np.append(pred_index_val,indicies.cpu().numpy())
-            target_val=np.append(target_val,tgt_5.cpu().numpy())
-            assert pred_index_val.shape == target_val.shape,(pred_index_val.shape , target_val.shape)
+            pred_index_test=np.append(pred_index_test,indicies.cpu().numpy())
+            target_test=np.append(target_test,tgt_5.cpu().numpy())
+            assert pred_index_test.shape == target_test.shape,(pred_index_test.shape , target_test.shape)
+            _, indicies = torch.max(op_4[:,:4],1)
 
+            pred_index4_test=np.append(pred_index4_test,indicies.cpu().numpy())
+            target4_test=np.append(target4_test,tgt_4.cpu().numpy())
 
-    torch.save(model.state_dict(), '{}/pytorchmodel-E{}.pt'.format(output_dir,epoch))
-
-    # loss_batch = loss_total/len(trainloader)    #for hard system
-    loss_batch = loss_total/len(target_train)
-    log_dic[epoch]={'train_loss':loss_batch,
-                    'train_5class_WA':accuracy_score(target_train,pred_index_train)*100.0,
-                    'train_5class_UA':balanced_accuracy_score(target_train,pred_index_train)*100.0,
-                    'val_5class_KL':cv_KL/len(target_val),
-                    'val_5class_WA':accuracy_score(target_val,pred_index_val)*100.0,
-                    'val_5class_UA':balanced_accuracy_score(target_val,pred_index_val)*100.0,
-                    'elapse_time':time.time() - start_time,
-                    'current_lr':optimizer.state_dict()['param_groups'][0]['lr'],
-                    'tf_ratio':tf_ratio[-1]
-    }
-    scheduler.step()
-    torch.cuda.empty_cache()
-
-
-# test
-pred_index_test=np.array([])
-target_test=np.array([])
-
-pred_index4_test=np.array([])
-target4_test=np.array([])
-
-model.eval()
-test_KL=0
-y_true=[]
-y_score_maxP=[]
-y_score_ent=[]
-with torch.no_grad():
-    for i, data in enumerate(testloader, 0):
-        op_6,tgt_soft,tgt_dpn,fname,op_5,tgt_5,op_4,tgt_4 = decode(data,filter4=True)
-        KL=loss_fn_kl(logsoftmax(op_6),tgt_soft).detach().item()
-        test_KL+=KL
-        for i,x in enumerate(fname):
-            if x in name_utt1:
-                y_true.append(0)
-            else:
-                y_true.append(1)
-            tmp=softmax(op_6[i]).cpu().numpy()
-            y_score_maxP.append(max(tmp))
-            y_score_ent.append(-entropy(tmp))
-
-        _, indicies = torch.max(op_5,1)
-        pred_index_test=np.append(pred_index_test,indicies.cpu().numpy())
-        target_test=np.append(target_test,tgt_5.cpu().numpy())
-        assert pred_index_test.shape == target_test.shape,(pred_index_test.shape , target_test.shape)
-        _, indicies = torch.max(op_4[:,:4],1)
-
-        pred_index4_test=np.append(pred_index4_test,indicies.cpu().numpy())
-        target4_test=np.append(target4_test,tgt_4.cpu().numpy())
-
-log_dic_test={'test_KL':test_KL/len(target_test),
-            'test_5class_WA':accuracy_score(target_test,pred_index_test)*100.0,
-            'test_5class_UA':balanced_accuracy_score(target_test,pred_index_test)*100.0,
-            'test_4class_WA':accuracy_score(target4_test,pred_index4_test)*100.0,
-            'test_4class_UA':balanced_accuracy_score(target4_test,pred_index4_test)*100.0,
-            'test_AUC_maxP':average_precision_score(y_true, y_score_maxP),
-            'test_AUC_ent':average_precision_score(y_true, y_score_ent)}
-np.savez(output_dir+"/AUC-score.npz",y_true=y_true, maxP=y_score_maxP, Ent=y_score_ent)
+    log_dic_test={'test_KL':test_KL/len(target_test),
+                'test_5class_WA':accuracy_score(target_test,pred_index_test)*100.0,
+                'test_5class_UA':balanced_accuracy_score(target_test,pred_index_test)*100.0,
+                'test_4class_WA':accuracy_score(target4_test,pred_index4_test)*100.0,
+                'test_4class_UA':balanced_accuracy_score(target4_test,pred_index4_test)*100.0,
+                'test_AUC_maxP':average_precision_score(y_true, y_score_maxP),
+                'test_AUC_ent':average_precision_score(y_true, y_score_ent)}
+    np.savez(output_dir+"/AUC-score.npz",y_true=y_true, maxP=y_score_maxP, Ent=y_score_ent)
