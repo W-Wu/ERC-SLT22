@@ -157,7 +157,7 @@ if __name__ == "__main__":
                                                         scp_test = "./data/iemocap_diag_test-all.scp")
 
     label_all = np.load('./data/IEMOCAP-hardlabel.npy',allow_pickle=True).item()
-    name_utt1=[x for x in label_all.keys() if label_all[x] == 'xxx']
+    name_utt1=[x for x in label_all.keys() if label_all[x] == 5]
 
     model = TransformerModel(device=device).to(device)
     optimizer = optim.Adam(model.parameters(), lr=param.learning_rate, weight_decay = param.l2_reg)
