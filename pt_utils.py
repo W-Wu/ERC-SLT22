@@ -20,6 +20,8 @@ from itertools import chain
 import sys
 from scipy.stats import entropy
 
+from pt_param import param
+
 
 def set_seed(seed):
     torch.manual_seed(seed)
