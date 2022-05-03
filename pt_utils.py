@@ -83,12 +83,12 @@ class LengthGroupedSampler(data.Sampler):
         return iter(indices)
 
 class DATAset(data.Dataset):
-    def __init__(self,scp_file):     
-        self.label_hard = np.load('./data/IEMOCAP-hardlabel-diag.npy',allow_pickle=True).item()
-        self.label = np.load('./data/IEMOCAP-softlabel-sum-diag.npy',allow_pickle=True).item()
-        self.w2v2 = np.load('./data/w2v2-ft-avg-diag.npy',allow_pickle=True).item()
-        self.bert = np.load('./data/bert-base-diag.npy',allow_pickle=True).item()
-        f=open('./data/order.json','r')
+    def __init__(self,scp_file,label_hard_path,label_path,w2v2_path,bert_path,order_path):     
+        self.label_hard = np.load(label_hard_path,allow_pickle=True).item()
+        self.label = np.load(label_path,allow_pickle=True).item()
+        self.w2v2 = np.load(w2v2_path,allow_pickle=True).item()
+        self.bert = np.load(bert_path,allow_pickle=True).item()
+        f=open(order_path,'r')
         self.paras=json.loads(f.read())
         self.scp_file = scp_file
 
@@ -105,14 +105,14 @@ class DATAset(data.Dataset):
         bert = self.bert[ses_id][start:end,:]
         return torch.from_numpy(w2v2).float(), torch.from_numpy(bert).float(),torch.from_numpy(label_avg).float(),torch.from_numpy(label_hard).float(),torch.from_numpy(label_sum).float(),name  
 
-def prep_dataloader(scp_train,scp_cv,scp_test):
+def prep_dataloader(scp_train,scp_cv,scp_test,label_hard_path,label_path,w2v2_path,bert_path,order_path):
     train_list = pd.read_csv(scp_train,delimiter='\t',header=0).values.tolist()
     cv_list = pd.read_csv(scp_cv,delimiter='\t',header=0).values.tolist()
     test_list = pd.read_csv(scp_test,delimiter='\t',header=0).values.tolist()
 
-    Train_dataset=DATAset(train_list)
-    Val_dataset=DATAset(cv_list)
-    Test_dataset=DATAset(test_list)
+    Train_dataset=DATAset(train_list,label_hard_path,label_path,w2v2_path,bert_path,order_path)
+    Val_dataset=DATAset(cv_list,label_hard_path,label_path,w2v2_path,bert_path,order_path)
+    Test_dataset=DATAset(test_list,label_hard_path,label_path,w2v2_path,bert_path,order_path)
 
     lengths = [len(x[0]) for x in Train_dataset]
     generator = torch.Generator()
