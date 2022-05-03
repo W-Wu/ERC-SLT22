@@ -1,3 +1,8 @@
+'''
+Code for sub-sequence randomization augmentation. Modified from https://github.com/FlorianKrey/DNC/blob/master/datapreperation/gen_augment_data.py
+'''
+
+
 import os
 import numpy as np
 import json
