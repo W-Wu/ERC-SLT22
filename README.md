@@ -3,12 +3,16 @@ Code for paper "Distribution-based Emotion Recognition in Conversation"
 Please cite: 
 
 ## Data preparation
-1. Prepare the input features in the form of a dictionary. The keys are the utterance names and the values are the corresponding numpy arrays.
-2. data_prep_process_label.py Generate hard label and soft label for IEMOCAP dataset. And also create a json file to store the order of utterances in each dialogue using data_prep_diag_order. An example of the order file is in 'data/order.json'.
-3. data_prep_organize_in_diag.py Process input features and labels into dialogue form.
-4. data_prep_split_augment.py Split data into traning, validaiton, and test set. Also perform sub-sequence randomisation for data augmentation. gives train.scp, cv.scp, test.scp
+1. Prepare the input features in a dictionary where keys are the utterance ids and the values are the corresponding numpy array. Example code for finetuning pretrained SSL models can be found on huggingface website (e.g. https://huggingface.co/docs/transformers/training).
+2. data_prep_process_label.py -- Process label for IEMOCAP dataset. Prepare majority vote label (hard label) and the sum of original one-hot labels from different evaluators for each sentence.
+3. data_prep_diag_order.py -- Create a json file to store the order of utterances in each dialogue. An example of the order file is under "data/order.json".
+4. data_prep_organize_in_diag.py -- Process input features and labels into dialogue form.
+5. data_prep_split_augment.py -- Split data into traning, validaiton, and test set for leave-one-session-out 5 fold cross validation. Augment dialogue by subsequence randomisation.
 
 ## Training and testing
-1. pt_train.py is the main training file
-2. can use plot_AUPR.py to plot the PR curve.
+1. pt_model.py -- Model file.
+2. pt_param.py -- Parameter settings.
+3. pt\_utils.py -- Prepare dataset and dataloader.
+4. pt_train.py -- the main training script including the test procedure which will save "AUC-score.npz" for AUPR evaluation.
+5. plot_AUPR.py -- plot the PR curve.
 
