@@ -152,7 +152,7 @@ if __name__ == "__main__":
         output_dir='./exp/'
         if not os.path.exists(output_dir): os.makedirs(output_dir) 
             
-    trainloader,valloader,testloader=prep_dataloader(scp_train = "./data/iemocap_diag_train5_maxlen=100_num=500.scp",
+    trainloader,valloader,testloader=prep_dataloader(scp_train = "./data/iemocap_diag_train.scp",
                                                         scp_cv = "./data/iemocap_diag_cv5-all.scp",
                                                         scp_test = "./data/iemocap_diag_test5-all.scp",
                                                         label_hard_path = './data/IEMOCAP-hardlabel-diag.npy',
