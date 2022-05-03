@@ -127,7 +127,7 @@ class Dir_loss(nn.Module):
         if self.smooth==True:
             pseudo_label = torch.diag_embed(torch.ones([n_class,]))*(1.0-float(n_class)*smooth) + torch.ones([n_class, n_class,])*smooth # label smooth [C, C]
         else:
-            pseudo_label = torch.diag_embed(torch.ones([n_class,]))*(1.0-smooth) + torch.ones([n_class, n_class,])*smooth # if not smooth #这里仍然用smooth这个变量，可以默认设为任何小于1的值，例如1e-7
+            pseudo_label = torch.diag_embed(torch.ones([n_class,]))*(1.0-smooth) + torch.ones([n_class, n_class,])*smooth # if not smooth 
         diag_label = torch.unsqueeze(pseudo_label,0).expand(batch_size, n_class, n_class)
         diag_label=diag_label.to(device)
         
@@ -149,19 +149,24 @@ if __name__ == "__main__":
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     if param.save_model:
-        output_dir='./exp/'
+        output_dir='./eg_pt/'
         if not os.path.exists(output_dir): os.makedirs(output_dir) 
-
-    trainloader,valloader,testloader=prep_dataloader(scp_train = "./data/iemocap_diag_train.scp",
-                                                        scp_cv = "./data/iemocap_diag_cv-all.scp",
-                                                        scp_test = "./data/iemocap_diag_test-all.scp")
+            
+    trainloader,valloader,testloader=prep_dataloader(scp_train = "./data/iemocap_diag_train5_maxlen=100_num=500.scp",
+                                                        scp_cv = "./data/iemocap_diag_cv5-all.scp",
+                                                        scp_test = "./data/iemocap_diag_test5-all.scp",
+                                                        label_hard_path = './data/IEMOCAP-hardlabel-diag.npy',
+                                                        label_path='./data/IEMOCAP-softlabel-sum-diag.npy',
+                                                        w2v2_path='./data/w2v2-pt-diag.npy',
+                                                        bert_path='./data/bert-base-diag.npy',
+                                                        order_path='./data/order.json',)
 
     label_all = np.load('./data/IEMOCAP-hardlabel.npy',allow_pickle=True).item()
     name_utt1=[x for x in label_all.keys() if label_all[x] == 5]
 
     model = TransformerModel(device=device).to(device)
     optimizer = optim.Adam(model.parameters(), lr=param.learning_rate, weight_decay = param.l2_reg)
-    # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9, last_epoch=-1)
+#     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9, last_epoch=-1)
     scheduler = get_linear_schedule_with_warmup(optimizer,num_warmup_steps=4,num_training_steps=param.EPOCH)
 
 
@@ -176,6 +181,7 @@ if __name__ == "__main__":
     tf_idx = 0
 
     log_dic={}
+    log_dic_test={}
 
     for epoch in range(param.EPOCH):
         pred_index_train=np.array([])
@@ -268,7 +274,9 @@ if __name__ == "__main__":
         }
         scheduler.step()
         torch.cuda.empty_cache()
-
+        
+    with open(output_dir+'train_log.json', 'wb') as json_file:
+        json_file.write(json.dumps(log_dic, indent=4, sort_keys=True).encode('utf_8'))
 
     # test
     pred_index_test=np.array([])
@@ -305,11 +313,15 @@ if __name__ == "__main__":
             pred_index4_test=np.append(pred_index4_test,indicies.cpu().numpy())
             target4_test=np.append(target4_test,tgt_4.cpu().numpy())
 
-    log_dic_test={'test_KL':test_KL/len(target_test),
+    log_dic_test[epoch]={'test_KL':test_KL/len(target_test),
                 'test_5class_WA':accuracy_score(target_test,pred_index_test)*100.0,
                 'test_5class_UA':balanced_accuracy_score(target_test,pred_index_test)*100.0,
                 'test_4class_WA':accuracy_score(target4_test,pred_index4_test)*100.0,
                 'test_4class_UA':balanced_accuracy_score(target4_test,pred_index4_test)*100.0,
                 'test_AUC_maxP':average_precision_score(y_true, y_score_maxP),
                 'test_AUC_ent':average_precision_score(y_true, y_score_ent)}
-    np.savez(output_dir+"/AUC-score.npz",y_true=y_true, maxP=y_score_maxP, Ent=y_score_ent)
+    np.savez(output_dir+"/AUC-score-"+str(epoch)+".npz",y_true=y_true, maxP=y_score_maxP, Ent=y_score_ent)
+    
+    with open(output_dir+'test_log.json', 'wb') as json_file:
+        json_file.write(json.dumps(log_dic_test, indent=4, sort_keys=True).encode('utf_8'))
+    
