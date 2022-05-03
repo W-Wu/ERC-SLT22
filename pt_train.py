@@ -149,7 +149,7 @@ if __name__ == "__main__":
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     if param.save_model:
-        output_dir='./eg_pt/'
+        output_dir='./exp/'
         if not os.path.exists(output_dir): os.makedirs(output_dir) 
             
     trainloader,valloader,testloader=prep_dataloader(scp_train = "./data/iemocap_diag_train5_maxlen=100_num=500.scp",
@@ -157,7 +157,7 @@ if __name__ == "__main__":
                                                         scp_test = "./data/iemocap_diag_test5-all.scp",
                                                         label_hard_path = './data/IEMOCAP-hardlabel-diag.npy',
                                                         label_path='./data/IEMOCAP-softlabel-sum-diag.npy',
-                                                        w2v2_path='./data/w2v2-pt-diag.npy',
+                                                        w2v2_path='./data/w2v2-ft-diag.npy',
                                                         bert_path='./data/bert-base-diag.npy',
                                                         order_path='./data/order.json',)
 
