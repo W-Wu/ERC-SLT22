@@ -1,4 +1,4 @@
-# ERC-SLT22
+# Distribution-based Emotion Recognition in Conversation
 Code for paper "Distribution-based Emotion Recognition in Conversation"
 Please cite: 
 
