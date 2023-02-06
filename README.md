@@ -1,6 +1,14 @@
 # Distribution-based Emotion Recognition in Conversation
-Code for paper "Distribution-based Emotion Recognition in Conversation"
-Please cite: 
+Code for paper "Distribution-based Emotion Recognition in Conversation"  
+Please cite:   
+> @inproceedings{wu2023distribution,  
+  title={Distribution-Based Emotion Recognition in Conversation},  
+  author={Wu, Wen and Zhang, Chao and Woodland, Philip C},  
+  booktitle={2022 IEEE Spoken Language Technology Workshop (SLT)},  
+  pages={860--867},  
+  year={2023}, 
+  organization={IEEE}  
+}
 
 ## Data preparation
 1. Prepare the input features in a dictionary where keys are the utterance ids and the values are the corresponding numpy array. Example code for finetuning pretrained SSL models can be found on huggingface website (e.g. https://huggingface.co/docs/transformers/training).
